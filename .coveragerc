@@ -1,0 +1,13 @@
+[run]
+source = 
+    rc_server
+    rc_client
+omit =
+    */tests/*
+    */__init__.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__.:
