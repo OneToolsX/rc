@@ -44,3 +44,14 @@ use the `pyinstaller` to package the client.
 ```bash
 pyinstaller -F rc_client/client.py
 ```
+
+## Issues
+
+Client:
+
+- the client need the sever to be shutdown, then the client can be shutdown.
+- the client if run the long time task, it will be blocked, can run the other command.
+
+Server:
+
+- the server not can hot reload on development mode.

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Remote Control Server</title>
+    <style>
+        body { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .client-list { margin: 20px 0; }
+        .command-form { margin: 20px 0; }
+        .result { margin: 20px 0; padding: 10px; background: #f0f0f0; }
+        .terminal-result {
+            background: #282a36;
+            border-radius: 6px;
+            padding: 16px;
+            margin-top: 16px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        .result-header {
+            color: #f8f8f2;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #44475a;
+            padding-bottom: 8px;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .status-success { background: #50fa7b; color: #282a36; }
+        .status-error { background: #ff5555; color: #f8f8f2; }
+        .output-section {
+            margin: 12px 0;
+        }
+        .output-label {
+            color: #bd93f9;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .stdout-content {
+            color: #f8f8f2;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .stderr-content {
+            color: #ff5555;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .copy-button {
+            background: #44475a;
+            border: none;
+            color: #f8f8f2;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-button:hover {
+            background: #6272a4;
+        }
+    </style>
+</head>
+<body>
+    <h1>Remote Control Server</h1>
+    
+    <div class="client-list">
+        <h2>Connected Clients</h2>
+        <select id="clientSelect">
+            {% for client in clients %}
+            <option value="{{ client.id }}">
+                {{ client.id }} ({{ client.info.hostname }})
+            </option>
+            {% endfor %}
+        </select>
+        <button onclick="refreshClients()">Refresh</button>
+    </div>
+
+    <div class="command-form">
+        <h2>Execute Command</h2>
+        <form onsubmit="executeCommand(event)">
+            <input type="text" id="command" placeholder="Enter command" style="width: 300px;">
+            <button type="submit">Execute</button>
+        </form>
+    </div>
+
+    <div id="result" class="result"></div>
+
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+        }
+
+        async function executeCommand(event) {
+            event.preventDefault();
+            const clientId = document.getElementById('clientSelect').value;
+            const command = document.getElementById('command').value;
+            
+            const response = await fetch('/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    client_id: clientId,
+                    command: command
+                })
+            });
+            
+            const data = await response.json();
+            const resultDiv = document.getElementById('result');
+            if (data.status === 'success') {
+                const result = data.result;
+                resultDiv.innerHTML = `
+                    <div class="terminal-result">
+                        <div class="result-header">
+                            <span>Command Output</span>
+                            <span class="status-badge ${result.return_code === 0 ? 'status-success' : 'status-error'}">
+                                Exit Code: ${result.return_code}
+                            </span>
+                        </div>
+                        ${result.stdout ? `
+                            <div class="output-section">
+                                <div class="output-label">
+                                    stdout 
+                                    <button class="copy-button" onclick="copyToClipboard('${result.stdout.replace(/'/g, "\\'")}')">
+                                        Copy
+                                    </button>
+                                </div>
+                                <div class="stdout-content">${result.stdout}</div>
+                            </div>
+                        ` : ''}
+                        ${result.stderr ? `
+                            <div class="output-section">
+                                <div class="output-label">
+                                    stderr
+                                    <button class="copy-button" onclick="copyToClipboard('${result.stderr.replace(/'/g, "\\'")}')">
+                                        Copy
+                                    </button>
+                                </div>
+                                <div class="stderr-content">${result.stderr}</div>
+                            </div>
+                        ` : ''}
+                        ${result.error ? `
+                            <div class="output-section">
+                                <div class="output-label">Error</div>
+                                <div class="stderr-content">${result.error}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="terminal-result">
+                        <div class="result-header">
+                            <span>Error</span>
+                            <span class="status-badge status-error">Failed</span>
+                        </div>
+                        <div class="stderr-content">${data.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        async function refreshClients() {
+            const response = await fetch('/clients');
+            const data = await response.json();
+            const select = document.getElementById('clientSelect');
+            select.innerHTML = data.clients.map(client => `
+                <option value="${client.id}">
+                    ${client.id} (${client.info.hostname})
+                </option>
+            `).join('');
+        }
+
+        // Refresh clients list periodically
+        setInterval(refreshClients, 5000);
+    </script>
+</body>
+</html>
