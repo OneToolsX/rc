@@ -11,4 +11,22 @@ client can update the system information to the server.
 
 ## dependencies
 
-- websockets asyncio psutil
+### Runtime Dependencies
+
+- websockets - WebSocket server and client implementation
+- psutil - System and process utilities
+- asyncio - Asynchronous I/O
+
+### Development Dependencies
+
+- pytest - Testing framework
+- pytest-asyncio - Async test support
+- pytest-cov - Test coverage
+- black - Code formatter
+- flake8 - Code linter
+
+## Setup
+
+```bash
+pip install -r requirements.txt
+```
