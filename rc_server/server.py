@@ -8,6 +8,7 @@ class RemoteControlServer:
         self.host = host
         self.port = port
         self.clients = set()
+        self.command_results = []
 
     async def handle_commands(self, websocket, command):
         """Send a single command to the client"""
@@ -34,15 +35,16 @@ class RemoteControlServer:
                 if data.get("type") == "system_info":
                     print(f"System info: {data['data']}")
                 elif data.get("type") == "command_result":
+                    self.command_results.append(data['data'])
                     print(f"Command result: {data['data']}")
         finally:
             self.clients.remove(websocket)
             command_task.cancel()
 
     async def start(self):
-        server = await serve(self.handle_client, self.host, self.port)
+        self.server = await serve(self.handle_client, self.host, self.port)
         print(f"Server running on ws://{self.host}:{self.port}")
-        await server.wait_closed()
+        await self.server.wait_closed()
 
 
 if __name__ == "__main__":
