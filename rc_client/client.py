@@ -3,10 +3,19 @@ import json
 import subprocess
 import websockets.client
 from utils.logger import setup_logger
+import uuid
+import platform
+import socket
 
 class RemoteControlClient:
-    def __init__(self, server_url="ws://localhost:8765"):
+    def __init__(self, server_url="ws://localhost:8765", client_id=None):
         self.server_url = server_url
+        self.client_id = client_id or str(uuid.uuid4())
+        self.client_info = {
+            "hostname": socket.gethostname(),
+            "platform": platform.platform(),
+            "python_version": platform.python_version()
+        }
         self.logger = setup_logger('rc_client', 'client.log')
         self.logger.info(f"Client initialized with server URL: {server_url}")
 
@@ -30,7 +39,15 @@ class RemoteControlClient:
     async def start(self):
         self.logger.info("Starting client...")
         async with websockets.client.connect(self.server_url) as websocket:
-            self.logger.info(f"Connected to server: {self.server_url}")
+            # Send client identification
+            await websocket.send(
+                json.dumps({
+                    "client_id": self.client_id,
+                    "client_info": self.client_info
+                })
+            )
+            self.logger.info(f"Connected to server: {self.server_url} with ID: {self.client_id}")
+            
             try:
                 async for message in websocket:
                     data = json.loads(message)
