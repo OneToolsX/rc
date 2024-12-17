@@ -1,59 +1,51 @@
 import asyncio
-import websockets
-import psutil
 import json
 import subprocess
-from websockets import client
 import websockets.client
-
+from utils.logger import setup_logger
 
 class RemoteControlClient:
     def __init__(self, server_url="ws://localhost:8765"):
         self.server_url = server_url
+        self.logger = setup_logger('rc_client', 'client.log')
+        self.logger.info(f"Client initialized with server URL: {server_url}")
 
     async def execute_command(self, command):
+        self.logger.debug(f"Executing command: {command}")
         try:
             process = await asyncio.create_subprocess_shell(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
             stdout, stderr = await process.communicate()
+            self.logger.debug(f"Command result: stdout={stdout}, stderr={stderr}, rc={process.returncode}")
             return {
                 "stdout": stdout.decode() if stdout else "",
                 "stderr": stderr.decode() if stderr else "",
                 "return_code": process.returncode,
             }
         except Exception as e:
+            self.logger.error(f"Command execution error: {str(e)}")
             return {"error": str(e)}
 
-    async def send_system_info(self, websocket):
-        while True:
-            system_info = {
-                "cpu_percent": psutil.cpu_percent(),
-                "memory_percent": psutil.virtual_memory().percent,
-                "disk_usage": psutil.disk_usage("/").percent,
-            }
-            await websocket.send(
-                json.dumps({"type": "system_info", "data": system_info})
-            )
-            await asyncio.sleep(5)
-
     async def start(self):
+        self.logger.info("Starting client...")
         async with websockets.client.connect(self.server_url) as websocket:
-            print(f"Connected to {self.server_url}")
-            system_info_task = asyncio.create_task(self.send_system_info(websocket))
-
+            self.logger.info(f"Connected to server: {self.server_url}")
             try:
                 async for message in websocket:
                     data = json.loads(message)
                     if data.get("type") == "command":
+                        self.logger.info(f"Received command: {data['data']}")
                         result = await self.execute_command(data["data"])
+                        self.logger.debug(f"Sending result: {result}")
                         await websocket.send(
-                            json.dumps({"type": "command_result", "data": result})
+                            json.dumps({
+                                "type": "command_result", 
+                                "data": result,
+                                "id": data.get("id")
+                            })
                         )
+            except Exception as e:
+                self.logger.error(f"Connection error: {str(e)}")
             finally:
-                system_info_task.cancel()
-
-
-if __name__ == "__main__":
-    client = RemoteControlClient()
-    asyncio.run(client.start())
+                self.logger.info("Client disconnected")
