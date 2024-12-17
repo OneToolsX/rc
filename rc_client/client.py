@@ -7,6 +7,9 @@ from utils.logger import setup_logger
 import uuid
 import platform
 import socket
+import asyncio
+import argparse
+import signal
 
 
 class RemoteControlClient:
@@ -98,3 +101,44 @@ class RemoteControlClient:
         """Stop the client and prevent reconnection"""
         self.logger.info("Stopping client...")
         self.running = False
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Remote Control Client")
+    parser.add_argument(
+        "--server",
+        default="ws://localhost:8765",
+        help="WebSocket server URL (default: ws://localhost:8765)",
+    )
+    parser.add_argument("--id", help="Client ID (optional)")
+    parser.add_argument(
+        "--retry", type=int, default=5, help="Retry interval in seconds (default: 5)"
+    )
+    return parser.parse_args()
+
+
+async def main_async():
+    args = parse_args()
+    client = RemoteControlClient(
+        server_url=args.server, client_id=args.id, retry_interval=args.retry
+    )
+
+    def signal_handler(*_):
+        client.running = False
+
+    # Handle graceful shutdown
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, signal_handler)
+
+    try:
+        await client.start()
+    except KeyboardInterrupt:
+        await client.stop()
+
+
+def main():
+    asyncio.run(main_async())
+
+
+if __name__ == "__main__":
+    main()

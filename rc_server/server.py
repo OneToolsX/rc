@@ -86,3 +86,8 @@ class RemoteControlServer:
         self.server = await serve(self.handle_client, self.host, self.port)
         self.logger.info(f"Server running on ws://{self.host}:{self.port}")
         await self.server.wait_closed()
+
+
+if __name__ == "__main__":
+    server = RemoteControlServer()
+    asyncio.run(server.start())

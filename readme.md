@@ -30,3 +30,17 @@ client can update the system information to the server.
 ```bash
 pip install -r requirements.txt
 ```
+
+### server
+
+```bash
+PYTHONPATH=$PYTHONPATH:. python rc_server/server.py
+```
+
+### client
+
+use the `pyinstaller` to package the client.
+
+```bash
+pyinstaller -F rc_client/client.py
+```
