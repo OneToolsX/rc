@@ -28,7 +28,7 @@ jobs:
     
     - name: Build with PyInstaller
       run: |
-        pyinstaller --clean -F rc_client/client.py -n rc_client
+        pyinstaller --clean --onefile -F  rc_client/client.py -n rc_client
         
     - name: Create Release
       id: create_release
