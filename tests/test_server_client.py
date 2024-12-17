@@ -9,7 +9,7 @@ from rc_client.client import RemoteControlClient
 
 
 @pytest.mark.asyncio
-async def test_server_client_interaction():
+async def test_server_handle_commands():
     server = RemoteControlServer(host="localhost", port=8765)
     client = RemoteControlClient(server_url="ws://localhost:8765")
 
@@ -21,14 +21,15 @@ async def test_server_client_interaction():
 
     # Send a test command from the server to the client
     test_command = "echo 'Hello, World!'"
-    await server.handle_commands(next(iter(server.clients)), test_command)
+    command_result = await server.handle_commands(
+        next(iter(server.clients)), test_command
+    )
 
     # Allow time for command execution and result transmission
     await asyncio.sleep(0.1)
 
     # Assert that the server received the correct command result
-    assert len(server.command_results) > 0
-    result = server.command_results[0]
+    result = command_result
     assert result["stdout"].strip() == "Hello, World!"
     assert result["stderr"] == ""
     assert result["return_code"] == 0
